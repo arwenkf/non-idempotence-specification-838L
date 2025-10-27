@@ -1,0 +1,210 @@
+
+
+\documentclass{article}
+\usepackage{graphicx} 
+\usepackage[margin=0.9in]{geometry}
+\usepackage{hyperref}
+\usepackage[dvipsnames]{xcolor}
+
+\usepackage[outputdir=./]{minted}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usemintedstyle{pastie}
+\AtBeginEnvironment{minted}{\singlespacing%
+    \fontsize{8.5}{9.5}\selectfont}
+
+\title{CMSC838L Project Proposal}
+\author{Arwen Ferro, Anjali Kumar, Ceren Mert}
+\date{October 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\subsection{Overall Problem Area}
+Correctness of Intermittent Computing through Random Testing \& Additional Formalisms about Non-idempotent Variables
+
+\subsection{Significance}\\
+
+Intermittent computing is an exciting area of research that delves into computing devices in areas or situations where battery or other stable power sources are unavailable, relying instead on energy-harvesting technology. Due to the nature of energy-harvesting technology, the supply of power is intermittent. Thus, it is critical to ensure that computation occurs correctly in the event of these frequent power failures.
+
+Although there have been rigorous efforts to prove the correctness of these systems through formal verification, there exists a lack of effort in random testing in the world of intermittent computing. We believe that testing is integral to achieving full correctness, in addition to verification. 
+
+In \href{https://dl.acm.org/doi/10.1145/3591250}{Curricle}, a type system to ensure correct execution in the event of frequent power failures, the idea of allowing non-idempotent variables, which are allowed to change in between executions, was introduced. While this is desirable in many situations, one common case being a reboot counter in the program, there has not yet been a correctness criterion introduced for this idea. Our goal is to get nearer to a formal correctness for these variables through testing and condition sets. 
+
+\section{Background Motivation}
+
+{\subsection{Related Work}}
+
+Our main motivation for the verification of formal correctness in intermittent computing systems is 
+\href{https://msurbatovich.github.io/assets/docs/surbatovich_pldi23_curricle.pdf}{Curricle}, a type system approach to proving the correctness of said systems with respect to defined idempotent variables, which we plan on expanding to allow specifications for non-idempotent variables. \\
+
+Our definition of formal correctness and idempotent variables are inspired by \href{https://eprints.soton.ac.uk/262472/1/vcs3preprint.pdf}{Verification Conditions Are Code}, and are subsequently results of the widely known Hoare Logic. We are also hoping to reference \href{https://dl.acm.org/doi/10.1145/3716311}{Model Crash Types for WAR-Aware Intermittent Computing} to understand the existing scope of crash handling in intermittent computing systems. Our inspiration for syntactical demonstration of our model came from \href{https://msurbatovich.github.io/assets/docs/pldi21main-p363-p-ad47bbe125-51344-final.pdf}{Automatically Enforcing Fresh and Consistent Inputs in Intermittent Systems}, as it was found as a cited related work in \href{https://dl.acm.org/doi/10.1145/3591250}{Curricle} as a Rust correctness analysis that fell short in programmer-expression of idempotent variables. \\
+
+To simulate the insertion of crash-points into existing code blocks, we plan to explore additional research papers such as  \href{https://www.sciencedirect.com/science/article/pii/S0167642320301039}{A type-directed algorithm to generate random well-typed Java 8 programs} and \href{https://dl.acm.org/doi/10.1145/3607860}{ETNA}
+
+\subsection{Existing Gaps in Current Research}
+Curricle doesn't set a formal specification for variables that are non-idempotent. To ensure these variables are utilized, it is integral to define a method for verifying their correctness.
+
+For our reboot counter example, we have currently stated that Non-idempotent variables are "allowed to change" between executions. However, by this definition, we may say that it is correct for a reboot counter to increment from 1 to 100 after 2 reboots. We need something more specific to know whether our program is working correctly.
+
+In addition, as we stated in the introduction, there's a lack of random testing within intermittent computing. We aim to take the first step to close this gap by randomly inserting crash-points to simulate crash conditions, and check the correctness of post-conditions. 
+\section{Approach Overview}
+
+\subsection{Proposed Solution}
+
+We plan to create simulated scenarios of random crash points in order to ensure the correctness of the states of checkpoints. Our planned process is as follows:
+\begin{enumerate}
+    \item The programmer feeds their source code, written in Curricle, into the Arbitrary Crash-point Adder (ACA)
+    \item The programmer also provides specifications about non-idempotent variables, stating their pre- and post-conditions (i.e. what should be true about the variable after execution). 
+    \item ACA produces variations of the source code while inserting crash-points in a randomized manner. The user theoretically would also be able to specify the number of simulated crash points to ACA.
+    \item The specifications the programmer provides are then checked across all variations of the source code, which is now annotated with simulated crash-points.
+\end{enumerate}
+
+
+\subsection{Tools \& Software in Use}
+For the program simulation, we will take in a sample program and then randomly insert "crash points" between syntactic lines. Then, in Rust, we will create a software-level simulator that executes the program up until the crash points and then restarts from the previous checkpoint/atomic region. This program will take in the condition that the non-idempotent variables need to meet, and then check that these conditions are met following the simulation of the crashes. 
+
+For example, with a reboot counter, we have access to how many times a crash has occurred because that is what we're simulating. So, we can hold this information and then verify that the counter has properly updated each time by the end of the atomic region (See example below).
+
+
+% we will work with Rust to break sample programs down into their abstract syntax tree. Then, we will simulate rerunning from various atomic regions (checkpoints) after a reboot, and when the program successfully reaches the end of the atomic region, we check whether the condition matches our expectation.
+
+% There will be a form of randomization for where the program crashes, likely through a random number generator to define which instruction was executing right before the crash. {\color{blue} not sure i understand what this means -ceren}\\
+
+\begin{figure}[h]
+\begin{minipage}{0.4\textwidth}
+\begin{minted}{rust}
+    #[atomic]
+    #[nids(rb)]
+    fn update(_x:& mut u16, y:& mut u16, 
+        rb:& mut i16) -> () {
+        // increment each time it is re-run
+        *rb += 1; 
+        let _z = *y + 3;
+        *y = 5;
+    }
+
+    #[rustc_main]
+    fn main() {
+        let mut x = 0;
+        let mut y: u16 = 0;
+        let mut rb: i16 = -1; // start at -1 
+        // to account for first run
+        update(&mut x, &mut y, &mut rb);
+    }
+\end{minted}
+% \begin{minted}{rust}
+% fn main() {
+%     let mut len: isize = -1; 
+%     let mut buf: Vec<char> = Vec::new();
+%     // Checkpoint #1
+%     append(&mut len, &mut buf);
+%     // Checkpoint #7
+% }
+
+% fn append(len: &mut isize, buf: &mut Vec<char>) {
+%     // Checkpoint #2
+%     let mut r1 = *len;
+%     r1 += 1;
+%     *len = r1;
+%     // Checkpoint #3
+%     let r1_usize = r1 as usize;
+%     // Checkpoint #4
+    
+%     if buf.len() <= r1_usize {
+%         buf.resize(r1_usize + 1, '\0'); 
+%     }
+%     // Checkpoint #5
+%     buf[r1_usize] = 'a';
+%     // Checkpoint #6
+% }
+% \end{minted}
+\end{minipage}
+\hspace{0.5em} % spacing before black box
+\begin{minipage}{0.1\textwidth}
+\centering
+\begin{tikzpicture}
+\node[
+  draw,
+  fill=Orchid,
+  text=white,
+  text width=1.9cm,     
+  minimum height=1.5cm,
+  align=center        
+] (bb) {Arbitrary Crash-point Adder (ACA)};
+
+\draw[->, thick, shorten <=10pt] (-2,0) -- (bb.west);
+\draw[->, thick, shorten >=10pt](bb.east) -- (2,0);
+\end{tikzpicture}
+\end{minipage}
+\hspace{5em} % spacing after black box
+\begin{minipage}{0.6\textwidth}
+\begin{minted}{rust}
+    #[atomic]
+    #[nids(rb)]
+    fn update(_x:& mut u16, y:& mut u16,
+        rb:& mut i16) -> () {
+        // increment each time it is re-run
+        *rb += 1; 
+        // -- RANDOM CRASH POINT #1 --
+        let _z = *y + 3;
+        *y = 5;
+        // -- RANDOM CRASH POINT #2 --
+    }
+
+    #[rustc_main]
+    fn main() {
+        let mut x = 0;
+        let mut y: u16 = 0;
+        let mut rb: i16 = -1; // start at -1 
+        // to account for first run
+        update(&mut x, &mut y, &mut rb);
+    }
+\end{minted}
+
+% \begin{minted}{rust}
+% fn main() {
+%     let mut len: isize = -1; 
+%     let mut buf: Vec<char> = Vec::new();
+%     // Checkpoint #1
+%     append(&mut len, &mut buf);
+%     // Checkpoint #7
+% }
+
+% fn append(len: &mut isize, buf: &mut Vec<char>) {
+%     // Checkpoint #2
+%     // ~~ RANDOM CRASH POINT #1 ~~
+%     let mut r1 = *len;
+%     r1 += 1;
+%     *len = r1;
+%     // Checkpoint #3
+%     let r1_usize = r1 as usize;
+%     // Checkpoint #4
+    
+%     if buf.len() <= r1_usize {
+%         buf.resize(r1_usize + 1, '\0'); 
+%     }
+%     // Checkpoint #5
+%     // ~~ RANDOM CRASH POINT #2 ~~
+%     buf[r1_usize] = 'a';
+%     // Checkpoint #6
+% }
+% \end{minted}
+\end{minipage}
+\caption{Source code (left) written with Curricle is inputted into Arbitrary Crashpoint Adder (ACA), which then outputs one of the many randomly generated modified code blocks with simulated crashpoints (right).}
+\end{figure}
+
+\section{Evaluation}
+\begin{itemize}
+    \item For correctness, we will evaluate whether the post-conditions that are provided by the user are satisfied across different versions of simulated crash-points. For some of these conditions, they will be a simple equality check; for others, there may be ranges of correct answers. We will test a series of sample inputs for a small sample of programs and ensure each works correctly, as well as ensure that our testing framework gives an accurate representation of the code. 
+    \item For overhead, we will measure the time it takes to generate the different variations. We will try to measure the effort put in by the user to provide these pre- and post-conditions, as well as how our storage mechanisms impact testing speed or feasibility.
+    \item To evaluate the utility of our approach, we will identify the types of scenarios that this simulation can effectively support. Additionally, we will examine whether other applications of non-idempotent variables can be characterized using the same methodology.
+\end{itemize}
+
+\section{Conclusion}
+Through this project, we are aiming to strengthen the correctness guarantees of non-idempotent variables in intermittent computing systems by introducing random testing within Curricle. We plan to simulate randomized crash-points and verify user-defined specifications for non-idempotent variables. Our approach aims to complement existing formal verification efforts with an empirical layer of testing to better reason about correctness in systems that experience frequent power interruptions.
+\end{document}
+
