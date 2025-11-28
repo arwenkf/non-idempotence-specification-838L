@@ -1,7 +1,13 @@
 //atomic start
 fn main() {
+let mut exec_num = 1; 
+ 'label1: loop {
     let mut z = 0;
     let mut x = 12;
+if (exec_num == 0) {
+                    exec_num+=1;
+                    continue 'label1;
+                }
     x += 1;
 
     let y = true;
@@ -11,11 +17,17 @@ fn main() {
     if y {
         x+= 2;
     }
+break; 
+ }
 }
 
 //atomic start
 //nids(z)
 fn test(z:& mut u16) -> () {
+let mut exec_num = 1; 
+ 'label2: loop {
     *z += 20;
+break; 
+ }
 }
 
