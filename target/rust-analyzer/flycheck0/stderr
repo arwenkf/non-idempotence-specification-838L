@@ -1,0 +1,8 @@
+   0.037972798s  INFO prepare_target{force=false package_id=aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca) target="aca"}: cargo::core::compiler::fingerprint: fingerprint dirty for aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca)/Check { test: false }/TargetInner { name: "aca", doc: true, ..: with_path("/home/aferro/838L/curricle-specification-838L/aca/src/main.rs", Edition2024) }
+   0.037984760s  INFO prepare_target{force=false package_id=aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca) target="aca"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
+   0.038164410s  INFO prepare_target{force=false package_id=aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca) target="aca"}: cargo::core::compiler::fingerprint: fingerprint dirty for aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca)/Check { test: true }/TargetInner { name: "aca", doc: true, ..: with_path("/home/aferro/838L/curricle-specification-838L/aca/src/main.rs", Edition2024) }
+   0.038168217s  INFO prepare_target{force=false package_id=aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca) target="aca"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
+    Checking aca v0.1.0 (/home/aferro/838L/curricle-specification-838L/aca)
+error: could not compile `aca` (bin "aca") due to 1 previous error; 3 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `aca` (bin "aca" test) due to 1 previous error; 3 warnings emitted
