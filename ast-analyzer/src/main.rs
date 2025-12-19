@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use syn::spanned::Spanned;
-use syn::{visit::Visit, BinOp, Expr, ExprAssign, ExprBinary, File};
+use syn::{visit::Visit, BinOp, Expr, ExprAssign, ExprBinary, File, UnOp};
 
 #[derive(Debug)]
 
@@ -28,28 +28,48 @@ impl VariableTracker {
     }
 }
 
+// helper for variable dereferences
+fn get_var_name(expr: &Expr) -> Option<String> {
+    match expr {
+        // direct variable access
+        Expr::Path(path) => {
+            path.path.get_ident().map(|id| id.to_string())
+        }
+        // access via dereference
+        Expr::Unary(unary) => {
+            if let UnOp::Deref(_) = unary.op {
+                get_var_name(&unary.expr)
+            } else {
+                None
+            }
+        }
+        // access via parens
+        Expr::Paren(paren) => {
+            get_var_name(&paren.expr)
+        }
+        _ => None,
+    }
+}
+
 // implement Visit trait
 impl<'ast> Visit<'ast> for VariableTracker {
     // handles assignments i.e. x = 2
     fn visit_expr_assign(&mut self, node: &'ast ExprAssign) {
-        if let Expr::Path(expr_path) = &*node.left {
-            if let Some(ident) = expr_path.path.get_ident() {
-                let var_name = ident.to_string();
+        if let Some(var_name) = get_var_name(&node.left) {
+            // filter by NIDs
+            if self.watched_vars.contains(&var_name) {
+                let rhs = node.right.to_token_stream().to_string();
+                let line = node.span().start().line;
                 
-                // filter so that the only vars we actually process are NIDs
-                if self.watched_vars.contains(&var_name) {
-                    let rhs = node.right.to_token_stream().to_string();
-                    let line = node.span().start().line;
-                    let func_repr = format!("{} = {}", var_name, rhs);
+                let lhs_code = node.left.to_token_stream().to_string();
+                let func_repr = format!("{} = {}", lhs_code, rhs);
 
-                    self.history.entry(var_name).or_default().push(Modification {
-                        line,
-                        operation: func_repr,
-                    });
-                }
+                self.history.entry(var_name).or_default().push(Modification {
+                    line,
+                    operation: func_repr,
+                });
             }
         }
-        // traverse down children
         syn::visit::visit_expr_assign(self, node);
     }
 
@@ -64,25 +84,21 @@ impl<'ast> Visit<'ast> for VariableTracker {
         };
 
         if is_compound_assignment {
-            if let Expr::Path(expr_path) = &*node.left {
-                if let Some(ident) = expr_path.path.get_ident() {
-                    let var_name = ident.to_string();
+            if let Some(var_name) = get_var_name(&node.left) {
+                // only process if current var is NID
+                if self.watched_vars.contains(&var_name) {
+                    let op = node.op.to_token_stream().to_string();
+                    let rhs = node.right.to_token_stream().to_string();
+                    let line = node.span().start().line;
 
-                    // only process if var is an NID
-                    if self.watched_vars.contains(&var_name) {
-                        let op = node.op.to_token_stream().to_string();
-                        let rhs = node.right.to_token_stream().to_string();
-                        let line = node.span().start().line;
+                    let lhs_code = node.left.to_token_stream().to_string();
+                    let math_op = op.trim_end_matches('=');
+                    let func_repr = format!("{} = {} {} ({})", lhs_code, lhs_code, math_op, rhs);
 
-                        // only keep the op (so just the '+' in a '+=')
-                        let math_op = op.trim_end_matches('=');
-                        let func_repr = format!("{} = {} {} ({})", var_name, var_name, math_op, rhs);
-
-                        self.history.entry(var_name).or_default().push(Modification {
-                            line,
-                            operation: func_repr,
-                        });
-                    }
+                    self.history.entry(var_name).or_default().push(Modification {
+                        line,
+                        operation: func_repr,
+                    });
                 }
             }
         }
@@ -95,7 +111,7 @@ fn parse_nids_header(code: &str) -> Vec<String> {
     for line in code.lines() {
         let trimmed = line.trim();
         // check for the specific prefix
-        if let Some(content) = trimmed.strip_prefix("// #[nids(") {
+        if let Some(content) = trimmed.strip_prefix("#[nids(") {
             // check for the suffix
             if let Some(inner) = content.strip_suffix(")]") {
                 return inner

@@ -1,14 +1,13 @@
-// #[nids(a, c)]
-
+#[atomic]
+#[nids(x, rb)]
+fn update(rb: &mut u32, x:& mut u16) -> () {
+   *rb += 1;
+   *x = 5;
+   *x = 3;
+}
+#[rustc_main]
 fn main() {
-    let mut a = 10;
-    let mut b = 0;
-    let mut c = 1; 
-    
-    a += 5;        
-    b = a * 2;  
-    
-    a = a - 2; 
-    
-    c = b + 1; 
+   let mut x = 0;
+   let mut rb = 0;
+   update(&mut rb, &mut x);
 }
