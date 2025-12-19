@@ -308,7 +308,7 @@ impl<'ast> Visit<'ast> for VariableTracker {
                     });
                 }
             }
-        }å
+        }
         syn::visit::visit_local(self, node);
     }
 }
