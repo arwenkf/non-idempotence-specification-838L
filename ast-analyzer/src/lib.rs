@@ -290,6 +290,27 @@ impl<'ast> Visit<'ast> for VariableTracker {
 
         syn::visit::visit_expr_call(self, node);
     }
+
+    fn visit_local(&mut self, node: &'ast syn::Local) {
+        if let Some(local_init) = &node.init {
+            if let syn::Pat::Ident(pat_ident) = &node.pat {
+                let var_name = pat_ident.ident.to_string();
+
+                if self.watched_vars.contains(&var_name) {
+                    let rhs = local_init.expr.to_token_stream().to_string();
+                    let line = node.span().start().line;
+                
+                    let func_repr = format!("{} = {}", var_name, rhs);
+
+                    self.history.entry(var_name).or_default().push(Modification {
+                        line,
+                        operation: func_repr,
+                    });
+                }
+            }
+        }å
+        syn::visit::visit_local(self, node);
+    }
 }
 
 // parse NIDs from user-given annotation at the top of a program
