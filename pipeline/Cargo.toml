@@ -1,0 +1,9 @@
+[package]
+name = "pipeline"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aca = { path = "../aca" }
+ast-analyzer = { path = "../ast-analyzer" }
+pre-post-injection = { path = "../pre-post-injection" }

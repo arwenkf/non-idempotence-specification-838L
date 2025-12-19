@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "pipeline",
+    "aca",
+    "ast-analyzer",
+    "pre-post-injection",
+]
