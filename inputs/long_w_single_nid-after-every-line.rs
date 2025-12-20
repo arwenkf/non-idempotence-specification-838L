@@ -1,5 +1,5 @@
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update1(x: &mut i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -14,8 +14,8 @@ fn update1(x: &mut i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update2(x: &i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -24,7 +24,7 @@ fn update2(x: &i32) {
             exec_num += 1;
             continue 'label1;
         }
-        if x > y {
+        if *x > y {
             println!("greater");
         }
         if (exec_num == 2) {
@@ -35,8 +35,8 @@ fn update2(x: &i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update3(x: &i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -49,8 +49,8 @@ fn update3(x: &i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update4(x: &mut i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -65,8 +65,8 @@ fn update4(x: &mut i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update5(x: & i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -90,8 +90,8 @@ fn update5(x: & i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update6(x: &mut i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -119,8 +119,8 @@ fn update6(x: &mut i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn update7(x: &mut i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -138,8 +138,8 @@ fn update7(x: &mut i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+//#[atomic]
+//#[nids(x)]
 fn update8(x: &mut i32) {
     let mut exec_num = 1; 
     'label1: loop {
@@ -172,8 +172,8 @@ fn update8(x: &mut i32) {
     }
 }
 
-#[atomic]
-#[nids(x)]
+//#[atomic]
+//#[nids(x)]
 fn main() { // these ones are a little excessive lol
     let mut exec_num = 1; 
     'label1: loop {
