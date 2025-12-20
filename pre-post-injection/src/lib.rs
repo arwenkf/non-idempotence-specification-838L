@@ -4,27 +4,27 @@ use std::fmt::Write;
 use std::env;
 use std::fs;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(nid_track: &HashMap<String, Vec<Option<(i32, usize)>>>, file_to_read: String) -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     
     if args.len() < 2 {
         std::process::exit(1);
     }
     
-    let file_to_read: String = args[1].clone();
+    // let file_to_read: String = args[1].clone();
     let source_code = fs::read_to_string(&file_to_read)
                 .expect("Failed to read input file");
 
 
-    let mut nid_track: HashMap<&str, Vec<Option<(i32, usize)>>> = HashMap::new();
+    // let mut nid_track: HashMap<&str, Vec<Option<(i32, usize)>>> = HashMap::new();
 
-    nid_track.insert("x", vec![
-        Some((0, 7)), 
-        Some((5, 2)),    
-        Some((3, 3))
-    ]);
+    // nid_track.insert("x", vec![
+    //     Some((0, 7)), 
+    //     Some((5, 2)),    
+    //     Some((3, 3))
+    // ]);
 
-    let new_file_content = inject_pre_post(&source_code, &nid_track);
+    let new_file_content = inject_pre_post(&source_code, nid_track);
     
     let path = Path::new(&file_to_read);
     
@@ -39,21 +39,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn inject_pre_post(source: &str, states: &HashMap<&str, Vec<Option<(i32, usize)>>>) -> String {
+fn inject_pre_post(source: &str, states: &HashMap<String, Vec<Option<(i32, usize)>>>) -> String {
     
-    let mut line_lookup: HashMap<usize, Vec<(&str, i32)>> = HashMap::new();
+    let mut line_lookup: HashMap<usize, Vec<(String, i32)>> = HashMap::new();
     
     // To remove duplicates and None(s)
-    let mut seen: HashSet<(&str, i32, usize)> = HashSet::new();
+    let mut seen: HashSet<(&String, i32, usize)> = HashSet::new();
 
     for (var_name, changes) in states {
         for entry in changes {
 
             if let Some((value, line_num)) = entry {
-                if seen.insert((*var_name, *value, *line_num)) {
+                if seen.insert((var_name, *value, *line_num)) {
                     line_lookup.entry(*line_num)
                         .or_insert_with(Vec::new)
-                        .push((*var_name, *value));
+                        .push((var_name.to_string(), *value));
                 }
             }
         }
