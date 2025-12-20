@@ -185,7 +185,7 @@ fn rewrite_calls(line: &str) -> String {
 
 pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> io::Result<HashMap<String, Vec<Option<(i32, usize)>>>> {
     // let re_crash = Regex::new(r"^//crash point").unwrap();
-    let re_atomic = Regex::new(r"//atomic start").unwrap();
+    let re_atomic = Regex::new(r"//\s*#\[atomic\]").unwrap();
     let re_nids = Regex::new(r"nids").unwrap();
     let re_nid_vars = Regex::new(r"([a-z\_]+)").unwrap();
     let re_ref = Regex::new(r"([a-z]+)\s*:\s*&").unwrap();
@@ -253,7 +253,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             curr_line_num+=1;
             output_line_num +=1;
             continue;
-        }
+        } else {
 
         // println!("{}", line);
 
@@ -265,7 +265,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
         }
         
 
-
+        println!("PRINT {curr_line_num}, {pend_atom}");
 
         if pend_atom && line.trim_start().starts_with("fn") {
             println!("A:LSKJD:LSKAJD:LJK {}", line);
@@ -286,7 +286,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                 ))?;
                 output_line_num +=1;
                 // output_line_num += 1;
-                // curr_line_num +=1 ;
+                curr_line_num +=1 ;
                 // continue;
             } else
             if let Some(caps) = re_fn_no_param.captures(line) {
@@ -299,7 +299,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                 ))?;
                 output_line_num +=1;
                 // output_line_num += 1;
-                // curr_line_num +=1 ;
+                curr_line_num +=1 ;
                 // continue;
             } else if let Some(caps) = re_fn.captures(line) {
                 
@@ -325,7 +325,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             if line.contains("{") {
                 // println!("{}", line);
                 // println!("Hellloooo");
-
+                println!("DEBUG {}", curr_line_num);
                 let to_write = format!(" \n 'label{loop_label}: loop {{");
                 writeln!(output, "{}", to_write)?;
                 output_line_num += 2;
@@ -337,11 +337,11 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                             let exec_num = num + 1;
                             let val = values[num].unwrap().0;
                             if ref_vars.contains(var) {
-                                inject = format!("if {exec_var} == {exec_num} {{*{var} =  {val}}} //restored from mem");
+                                inject = format!("if *{exec_var} == {exec_num} {{*{var} =  {val}}} //restored from mem");
                                 writeln!(output, "{}", inject)?;
                                 output_line_num += 1;
                             } else if defined_vars.contains(var){
-                                inject = format!("if {exec_var} == {exec_num} {{ {var} = {val}}} //restored from mem");
+                                inject = format!("if *{exec_var} == {exec_num} {{ {var} = {val}}} //restored from mem");
                                 writeln!(output, "{}", inject)?;
                                 output_line_num += 1;
                             }
@@ -432,7 +432,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                 output_line_num += 1;
 
                 let to_write = format!("if ({} == {}) {{
-                    {}+=1;
+                    *{}+=1;
                     continue \'label{};
                 }}", exec_var, exec_num, exec_var, loop_label);
                 // get values operations -- may need to consult w anjali for this
@@ -452,6 +452,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             curr_line_num+=1;
             continue;
         }
+    }
 
         // if we are at a line number where there should be a crash point
         // println!("{}", curr_line_num);
