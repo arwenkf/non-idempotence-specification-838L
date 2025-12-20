@@ -1,7 +1,7 @@
 //atomic start
 //#[nids(x,rb)]
-fn update(x:& mut u16, rb:& mut u16) -> () {
-let mut exec_num = 1; 
+fn update(x:& mut u16, rb:& mut u16, exec_num: &mut i32) -> () {
+ 
  'label1: loop {
 if exec_num == 3 {*rb =  0} //restored from mem
 if exec_num == 4 {*rb =  1} //restored from mem
@@ -32,11 +32,12 @@ break;
 //atomic start
 //#[nids(x,rb)]
 fn main() {
-let mut exec_num = 1; 
+let mut exec_num = 1;
+ 
  'label2: loop {
    let mut rb = 0;
    let mut x = 0;
-   update(&mut x, &mut rb);
+update(&mut x, &mut rb, &mut exec_num)
 break; 
  }
 }

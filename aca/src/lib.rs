@@ -1,7 +1,7 @@
 
 use regex::Regex;
 use std::collections::HashMap;
-use std::fmt::format;
+use std::fmt::{format, write};
 use std::fs::{read_to_string, File, OpenOptions};
 use std::io::{self, BufReader, BufWriter, Write, BufRead};
 
@@ -156,12 +156,43 @@ fn update_struct(struc: &mut HashMap<String, Vec<Option<(i32, usize)>>>, map: &H
     }      
 }
 
+fn rewrite_calls(line: &str) -> String {
+    let re_nonempty_call = Regex::new(r"\b([A-Za-z_][A-Za-z0-9_]*)(::<[^>]*>)?\s*\(([^()]*)\)").unwrap();
+    let re_empty_call = Regex::new(r"\b([A-Za-z_][A-Za-z0-9_]*)(::<[^>]*>)?\s*\(\s*\)").unwrap();
+
+    if let Some(caps) = re_empty_call.captures(&line) {
+        let name = &caps[1];
+        let generics = caps.get(2).map_or("", |m| m.as_str());
+
+        return format!(
+            "{}{}(&mut exec_num)",
+            name, generics
+        );
+    } else
+
+    if let Some(caps) = re_nonempty_call.captures(&line) {
+        let name = &caps[1];
+        let generics = caps.get(2).map_or("", |m| m.as_str());
+        let args = &caps[3];
+
+        return format!(
+            "{}{}({}, &mut exec_num)",
+            name, generics, args.trim()
+        );
+    };
+    return "".to_string();
+}
+
 pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> io::Result<HashMap<String, Vec<Option<(i32, usize)>>>> {
     // let re_crash = Regex::new(r"^//crash point").unwrap();
     let re_atomic = Regex::new(r"//atomic start").unwrap();
     let re_nids = Regex::new(r"nids").unwrap();
     let re_nid_vars = Regex::new(r"([a-z\_]+)").unwrap();
     let re_ref = Regex::new(r"([a-z]+)\s*:\s*&").unwrap();
+    let re_fn:Regex = Regex::new(r"(fn\s*[A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)(.*)").unwrap();
+    let re_fn_no_param = Regex::new(r"(fn\s+[A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)(.*)").unwrap();
+    let re_main = Regex::new(r"fn\s*main\(\s*\)").unwrap();
+    let re_call = Regex::new(r"\b([A-Za-z_][A-Za-z0-9_]*)(::<[^>]*>)?\s*\(").unwrap();
     let mut line_mappings: HashMap<i32, i32> = HashMap::new();
     let let_binding = Regex::new(r"let (mut)? *([a-z\_]+) *=.+").unwrap();
     // let mut nid_return: HashMap<String, Vec<Option<(i32, usize)>>> = HashMap::new(); // where values will go as it updates
@@ -170,6 +201,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
     let mut data = build_struct(file, &nid_track);
     // println!("HELLO {:?}", data);
 
+    // println!("{:?}", data);
     let mut line_nums = vec![];
     for (_ ,v) in &nid_track {
         for (_, line) in v.iter().skip(1) { // currently makes it so that the init line is not counted since that's the init
@@ -197,20 +229,32 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
     let mut brace_depth = 0;
     let mut output_line_num = 1;
     
+    
 
     let mut output = File::create(out_file_path)?;
     let mut defined_vars: Vec<String> = vec![]; //UGH
 
     for line in read_to_string(file).unwrap().lines() {
         println!("{curr_line_num}, {line}");
-
-
-        if re_nids.is_match(line) {
-            let mut nids = vec![];
-            for (_, [var]) in re_nid_vars.captures_iter(line).map(|c| c.extract()) {
-                nids.push(var);
+        if line.starts_with("//") {
+            if re_nids.is_match(line) {
+                let mut nids = vec![];
+                for (_, [var]) in re_nid_vars.captures_iter(line).map(|c| c.extract()) {
+                    nids.push(var);
+                }
             }
+            if re_atomic.is_match(line) {
+                // if we see we are at the beginning of an atomic region
+                loop_label += 1;
+                pend_atom = true;
+            }
+
+            writeln!(output, "{}", line)?;
+            curr_line_num+=1;
+            output_line_num +=1;
+            continue;
         }
+
         // println!("{}", line);
 
         if let_binding.is_match(line) {
@@ -221,13 +265,10 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
         }
         
 
-        if re_atomic.is_match(line) {
-            // if we see we are at the beginning of an atomic region
-            loop_label += 1;
-            pend_atom = true;
-        }
+
 
         if pend_atom && line.trim_start().starts_with("fn") {
+            println!("A:LSKJD:LSKAJD:LJK {}", line);
 
             for (_, [var]) in re_ref.captures_iter(line).map(|c| c.extract()) {
                 ref_vars.push(var.to_string());
@@ -236,15 +277,53 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             // if there was an atomic above and we're now at the function
             // write the func header
             in_atomic = true;
-            writeln!(output, "{}", line)?;
-            output_line_num += 1;
+
+            if re_main.is_match(line) {
+                writeln!(output, "{}", line)?;
+                output_line_num += 1;
+                writeln!(output, "{}", format!(
+                    "let mut exec_num = 1;"
+                ))?;
+                // output_line_num += 1;
+                // curr_line_num +=1 ;
+                // continue;
+            } else
+            if let Some(caps) = re_fn_no_param.captures(line) {
+                let head = &caps[1];
+                let tail = &caps[2];
+
+                writeln!(output, "{}", format!(
+                    "{}(exec_num: &mut i32){}",
+                    head, tail
+                ))?;
+                // output_line_num += 1;
+                // curr_line_num +=1 ;
+                // continue;
+            } else if let Some(caps) = re_fn.captures(line) {
+                
+                // println!("{:?}", caps);
+                let head = &caps[1];
+                let params = &caps[2];
+                let tail = &caps[3];
+
+                writeln!(output, "{}", format!(
+                    "{}({}, exec_num: &mut i32){}",
+                    head, params.trim(), tail
+                ))?;
+                // output_line_num += 1;
+                // curr_line_num +=1 ;
+                // continue;
+            }
+
+            // writeln!(output, "{}", line)?;
+
 
             // if the `{` is on the same line, inject right away
             if line.contains("{") {
-                println!("{}", line);
+                // println!("{}", line);
                 // println!("Hellloooo");
 
-                let to_write = format!("let mut exec_num = 1; \n 'label{loop_label}: loop {{");
+                let to_write = format!(" \n 'label{loop_label}: loop {{");
                 writeln!(output, "{}", to_write)?;
                 output_line_num += 2;
                 
@@ -279,15 +358,23 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             }
             // continue reading normally
             curr_line_num+=1;
-            println!("{curr_line_num}");
+            // println!("{curr_line_num}");
             continue;
+        } else {
+            // if it doesn't start with fn
+            if re_call.is_match(line) && !line.trim_ascii_start().starts_with("fn"){
+                writeln!(output, "{}", rewrite_calls(&line))?;
+                output_line_num += 1;
+                curr_line_num +=1;
+                continue;
+            }
         }
 
         if pend_atom && line.contains("{") {
             // in case the brace is elsewhere
             writeln!(output, "{}", line)?;
             output_line_num += 1;
-            let to_write = format!("let mut exec_num = 1; \n 'label{loop_label}: loop {{");
+            let to_write = format!("\n 'label{loop_label}: loop {{");
             writeln!(output, "{}", to_write)?;
             output_line_num += 2;
             
@@ -302,7 +389,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                 brace_depth = 1;
                 writeln!(output, "{}", line)?;
                 output_line_num += 1;
-                let to_write = format!("let mut exec_num = 1; \n 'label{loop_label}: loop {{");
+                let to_write = format!(" \n 'label{loop_label}: loop {{");
                 writeln!(output, "{}", to_write)?;
                 output_line_num += 2;
                 
@@ -377,8 +464,8 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
     // nid_return.remove_entry("nids");
     // println!("{:?}", nid_return);
     update_struct(&mut data, &line_mappings);
-    println!("A:KJLK {:?}", data);
-    // println!("{output_line_num}");
+    // println!("A:KJLK {:?}", data);
+    println!("{output_line_num}");
     // println!("{:?}", line_mappings);
     Ok(data)
 }
