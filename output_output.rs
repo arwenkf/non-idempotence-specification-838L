@@ -24,13 +24,13 @@ fn lookup(
 fn update(x:& mut u16, rb:& mut u16) -> () {
 let mut exec_num = 1; 
  'label1: loop {
-if exec_num == 1 {*x =  0} //restored from mem
-if exec_num == 2 {*x =  5} //restored from mem
-if exec_num == 3 {*x =  5} //restored from mem
-if exec_num == 4 {*x =  3} //restored from mem
-if exec_num == 2 {*rb =  0} //restored from mem
-if exec_num == 3 {*rb =  1} //restored from mem
+if exec_num == 3 {*rb =  0} //restored from mem
 if exec_num == 4 {*rb =  1} //restored from mem
+if exec_num == 5 {*rb =  1} //restored from mem
+if exec_num == 2 {*x =  0} //restored from mem
+if exec_num == 3 {*x =  5} //restored from mem
+if exec_num == 4 {*x =  5} //restored from mem
+if exec_num == 5 {*x =  3} //restored from mem
    if !(lookup(x, exec_num).is_none() || x.smart_eq(lookup(x, exec_num).unwrap())) { panic!("Pre-condition failed"); }
    *x = 5;   
    if !x.smart_eq(5) { panic!("Post-condition failed"); }

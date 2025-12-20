@@ -77,6 +77,7 @@ fn build_struct(file: &str, nid_track: &HashMap<String, Vec<(i32, i32)>>) -> Has
                 .or_default()
                 .push((var.clone(), *value));
         }
+        nid_return.entry(var.to_string()).or_default().push(None); // manually start at None
     }
 
     for line in read_to_string(file).unwrap().lines() {

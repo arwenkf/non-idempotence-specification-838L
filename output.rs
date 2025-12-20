@@ -3,13 +3,13 @@
 fn update(x:& mut u16, rb:& mut u16) -> () {
 let mut exec_num = 1; 
  'label1: loop {
-if exec_num == 1 {*x =  0} //restored from mem
-if exec_num == 2 {*x =  5} //restored from mem
-if exec_num == 3 {*x =  5} //restored from mem
-if exec_num == 4 {*x =  3} //restored from mem
-if exec_num == 2 {*rb =  0} //restored from mem
-if exec_num == 3 {*rb =  1} //restored from mem
+if exec_num == 3 {*rb =  0} //restored from mem
 if exec_num == 4 {*rb =  1} //restored from mem
+if exec_num == 5 {*rb =  1} //restored from mem
+if exec_num == 2 {*x =  0} //restored from mem
+if exec_num == 3 {*x =  5} //restored from mem
+if exec_num == 4 {*x =  5} //restored from mem
+if exec_num == 5 {*x =  3} //restored from mem
    *x = 5;   
 if (exec_num == 1) {
                     exec_num+=1;
