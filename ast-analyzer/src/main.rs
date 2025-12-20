@@ -3,29 +3,31 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use syn::spanned::Spanned;
-use syn::{visit::Visit, BinOp, Expr, ExprAssign, ExprBinary, File, UnOp};
+use syn::{visit::Visit, BinOp, Expr, ExprAssign, ExprBinary, File, UnOp, Local, Pat};
 
-#[derive(Debug)]
-
-// struct to hold single modification event
-struct Modification {
-    line: usize,
-    operation: String, // function like f_n(x)
-}
+// value, line number
+type ValueLineTuple = (i32, i32);
 
 // Visitor that tracks variables
 struct VariableTracker {
     watched_vars: HashSet<String>, // list of NIDs
-    history: HashMap<String, Vec<Modification>>, // maps variable name to list of its modifications
+    instantiations: HashMap<String, ValueLineTuple>,
+    nid_track: HashMap<String, Vec<ValueLineTuple>>,
 }
 
 impl VariableTracker {
     fn new(targets: Vec<String>) -> Self {
         VariableTracker {
             watched_vars: targets.into_iter().collect(),
-            history: HashMap::new(),
+            instantiations: HashMap::new(),
+            nid_track: HashMap::new(),
         }
     }
+}
+
+// try to parse values to i32s 
+fn parse_value(val_str: &str) -> i32 {
+    val_str.trim().parse::<i32>().unwrap_or(0)
 }
 
 // helper for variable dereferences
@@ -51,23 +53,45 @@ fn get_var_name(expr: &Expr) -> Option<String> {
     }
 }
 
+// crappy pattern parser for lets
+fn get_pat_name(pat: &Pat) -> Option<String> {
+    if let Pat::Ident(pat_ident) = pat {
+        return Some(pat_ident.ident.to_string());
+    }
+    None
+}
+
 // implement Visit trait
 impl<'ast> Visit<'ast> for VariableTracker {
+    // handles instatiations
+    fn visit_local(&mut self, node: &'ast Local) {
+        if let Some(var_name) = get_pat_name(&node.pat) {
+            if self.watched_vars.contains(&var_name) {
+                if let Some(init) = &node.init {
+                    let rhs_str = init.expr.to_token_stream().to_string();
+                    let rhs_val = parse_value(&rhs_str);
+                    let line = node.span().start().line as i32;
+
+                    self.instantiations.insert(var_name, (rhs_val, line));
+                }
+            }
+        }
+        syn::visit::visit_local(self, node);
+    }
+    
     // handles assignments i.e. x = 2
     fn visit_expr_assign(&mut self, node: &'ast ExprAssign) {
         if let Some(var_name) = get_var_name(&node.left) {
             // filter by NIDs
             if self.watched_vars.contains(&var_name) {
-                let rhs = node.right.to_token_stream().to_string();
-                let line = node.span().start().line;
+                let rhs_str = node.right.to_token_stream().to_string();
+                let rhs_val = parse_value(&rhs_str);
+                let line = node.span().start().line as i32;
                 
-                let lhs_code = node.left.to_token_stream().to_string();
-                let func_repr = format!("{} = {}", lhs_code, rhs);
-
-                self.history.entry(var_name).or_default().push(Modification {
-                    line,
-                    operation: func_repr,
-                });
+                self.nid_track
+                    .entry(var_name)
+                    .or_default()
+                    .push((rhs_val, line));
             }
         }
         syn::visit::visit_expr_assign(self, node);
@@ -87,18 +111,14 @@ impl<'ast> Visit<'ast> for VariableTracker {
             if let Some(var_name) = get_var_name(&node.left) {
                 // only process if current var is NID
                 if self.watched_vars.contains(&var_name) {
-                    let op = node.op.to_token_stream().to_string();
-                    let rhs = node.right.to_token_stream().to_string();
-                    let line = node.span().start().line;
+                    let rhs_str = node.right.to_token_stream().to_string();
+                    let rhs_val = parse_value(&rhs_str); 
+                    let line = node.span().start().line as i32;
 
-                    let lhs_code = node.left.to_token_stream().to_string();
-                    let math_op = op.trim_end_matches('=');
-                    let func_repr = format!("{} = {} {} ({})", lhs_code, lhs_code, math_op, rhs);
-
-                    self.history.entry(var_name).or_default().push(Modification {
-                        line,
-                        operation: func_repr,
-                    });
+                    self.nid_track
+                        .entry(var_name)
+                        .or_default()
+                        .push((rhs_val, line));
                 }
             }
         }
@@ -143,31 +163,35 @@ fn main() {
     }
 
     // parse AST
-    let syntax_tree: File = syn::parse_str(&code).expect("Unable to parse code");
+    let ast: File = syn::parse_str(&code).expect("Unable to parse code");
 
     // traverse AST with respect to NIDs
     let mut tracker = VariableTracker::new(nids);
-    tracker.visit_file(&syntax_tree);
+    tracker.visit_file(&ast);
 
-    let mut sorted_keys: Vec<_> = tracker.history.keys().collect();
-    sorted_keys.sort();
+    let mut all_vars: Vec<_> = tracker.watched_vars.iter().collect();
+    all_vars.sort();
 
-    if sorted_keys.is_empty() {
-        println!("No modifications found for NIDs.");
-    }
-
-    for var in sorted_keys {
-        let mods = &tracker.history[var];
-        println!("Variable: '{}'", var);
-        print!("  Chain: x");
-        for m in mods {
-            print!(" -> f_{}(x)", m.line);
-        }
-        println!("\n  Details:");
+    println!("nid_track");
+    for var in all_vars {
+        let mut all_mods = Vec::new();
         
-        for m in mods {
-            println!("    Line {:<3} | Transformation: {}", m.line, m.operation);
+        if let Some(inst) = tracker.instantiations.get(var) {
+            all_mods.push(*inst);
         }
-        println!();
+
+        if let Some(nid_track) = tracker.nid_track.get(var) {
+            all_mods.extend(nid_track);
+        }
+
+        if !all_mods.is_empty() {
+            println!("Nid: '{}'", var);
+            print!("  [");
+            for (i, (val, line)) in all_mods.iter().enumerate() {
+                if i > 0 { print!(", "); }
+                print!("({}, {})", val, line);
+            }
+            println!("]\n");
+        }
     }
 }
