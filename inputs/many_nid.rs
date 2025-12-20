@@ -1,26 +1,26 @@
-#[atomic]
-#[nids(x, y, z)]
-fn update(x: &mut i32, y: &mut u32, z: &mut u32) -> () {
+// #[atomic]
+// #[nids(x, y, z)]
+fn update(x: &mut i32, y: &mut i32, z: &mut i32) -> () {
     *x = 5;
     *y = 3;
-    *x += 1;
+    *x = 1;
     *z = 13;
-    *y -= 1;
+    *y = 1;
 
 }
 
-#[atomic]
-#[nids(a, b)]
-fn update_two(a: &mut i32, b: &mut u32) -> () {
+// #[atomic]
+// #[nids(a, b)]
+fn update_two(a: &mut i32, b: &mut i32) -> () {
     *a = 0;
-    *a += 1;   
+    *a = 1;   
     *b = 0;
-    *b += 1;   
-    *a -= 1; 
+    *b = 1;   
+    *a = 1; 
 }
 
-#[atomic]
-#[nids(x, y, z, a, b, c, d)]
+// #[atomic]
+// #[nids(x, y, z, a, b, c, d)]
 fn main() {
     let mut x = 0;
     let mut y = 1;

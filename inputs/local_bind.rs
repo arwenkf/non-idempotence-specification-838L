@@ -1,14 +1,14 @@
-#[atomic]
-#[nids(x)]
-fn update(x:& mut u16) -> () {
+// #[atomic]
+// #[nids(x)]
+fn update(x:& mut i32) -> () {
     *x = 5;   
     let mut y = 14;    
     *x = 3;
-    *y  = 12;
+    y  = 12;
 }
 
-#[atomic]
-#[nids(x)]
+// #[atomic]
+// #[nids(x)]
 fn main() {
     let mut x = 0;
     update(&mut x);
