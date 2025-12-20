@@ -11,18 +11,9 @@ pub fn run(nid_track: &HashMap<String, Vec<Option<(i32, usize)>>>, file_to_read:
         std::process::exit(1);
     }
     
-    // let file_to_read: String = args[1].clone();
     let source_code = fs::read_to_string(&file_to_read)
                 .expect("Failed to read input file");
 
-
-    // let mut nid_track: HashMap<&str, Vec<Option<(i32, usize)>>> = HashMap::new();
-
-    // nid_track.insert("x", vec![
-    //     Some((0, 7)), 
-    //     Some((5, 2)),    
-    //     Some((3, 3))
-    // ]);
 
     let new_file_content = inject_pre_post(&source_code, nid_track);
     
@@ -61,6 +52,28 @@ fn inject_pre_post(source: &str, states: &HashMap<String, Vec<Option<(i32, usize
 
     let mut output = String::new();
 
+    output.push_str("use once_cell::sync::Lazy;\n");
+    output.push_str("use std::collections::HashMap;\n\n");
+    
+    output.push_str("static NID_TRACK: Lazy<HashMap<&'static str, Vec<Option<(i32, usize)>>>> =\n");
+    output.push_str("    Lazy::new(|| {\n");
+    output.push_str("        let mut m = HashMap::new();\n");
+
+    for (var_name, vec_data) in states {
+        write!(output, "        m.insert(\"{}\", vec![", var_name).unwrap();
+        let items: Vec<String> = vec_data.iter().map(|opt| {
+            match opt {
+                Some((val, line)) => format!("Some(({}, {}))", val, line),
+                None => "None".to_string(),
+            }
+        }).collect();
+        output.push_str(&items.join(", "));
+        output.push_str("]);\n");
+    }
+    
+    output.push_str("        m\n");
+    output.push_str("    });\n\n");
+
     // to check equality without worrying about deref
     output.push_str(
 r#"trait SmartEq<T> {
@@ -72,22 +85,17 @@ impl<T: PartialEq + Copy> SmartEq<T> for T {
         *self == other
     }
 }
-
 "#);
 
     // lookup util for nid_track
     output.push_str(
-r#"fn lookup(
-    nid_track: &HashMap<&str, Vec<Option<(i32, usize)>>>, 
-    var_name: &str, 
-    exec_num: usize
-) -> Option<i32> {
-    nid_track.get(var_name)            
-        .and_then(|v| v.get(exec_num))  
-        .and_then(|opt| *opt)           
-        .map(|(val, _)| val)           
+r#"fn lookup(var: &str, exec_num: i32) -> Option<i32> {
+    NID_TRACK
+        .get(var)
+        .and_then(|v| v.get(exec_num as usize)) 
+        .and_then(|opt| *opt)
+        .map(|(val, _)| val)
 }
-
 "#);
 
     
