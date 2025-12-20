@@ -103,7 +103,7 @@ r#"fn lookup(
             for (var_name, _val) in &sorted_values {
                 writeln!(
                     output, 
-                     "{}if !(lookup({}, exec_num).is_none() || {}.smart_eq(lookup({}, exec_num).unwrap())) {{ panic!(\"Pre-condition failed\"); }}",
+                     "{}(if !(lookup(\"{}\", exec_num).is_none() || {}.smart_eq(lookup(\"{}\", exec_num).unwrap())) {{ panic!(\"Pre-condition failed\"); }});",
                     indentation, var_name, var_name, var_name
                 ).unwrap();
             }
@@ -115,7 +115,7 @@ r#"fn lookup(
             for (var_name, val) in &sorted_values {
                 writeln!(
                     output, 
-                     "{}if !{}.smart_eq({}) {{ panic!(\"Post-condition failed\"); }}",
+                     "{}(if !{}.smart_eq({}) {{ panic!(\"Post-condition failed\"); }});",
                     indentation, var_name, val
                 ).unwrap();
             }
