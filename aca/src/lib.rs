@@ -139,16 +139,16 @@ fn build_struct(file: &str, nid_track: &HashMap<String, Vec<(i32, i32)>>) -> Has
 
 
     nid_return.remove_entry("nids");
-    // println!("{:?}", nid_return);
+    println!("{:?}", nid_return);
     nid_return
 }
 
 fn update_struct(struc: &mut HashMap<String, Vec<Option<(i32, usize)>>>, map: &HashMap<i32,i32>) {
     for vec in struc.values_mut() {
         for opt in vec.iter_mut() {
-            if let Some((x, _)) = opt {
-                if let Some(new_x) = map.get(x) {
-                    *x = *new_x;
+            if let Some((_, x)) = opt {
+                if let Some(new_x) = map.get(&(*x as i32)) {
+                    *x = *new_x as usize;
                 }
             }
         }
@@ -216,6 +216,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
             for (_, [var]) in re_nid_vars.captures_iter(line).map(|c| c.extract()) {
                 defined_vars.push(var.to_string());
             }
+            line_mappings.insert(curr_line_num, output_line_num);
         }
         
 
@@ -362,7 +363,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
         }
 
         // if we are at a line number where there should be a crash point
-        println!("{}", curr_line_num);
+        // println!("{}", curr_line_num);
 
 
 
@@ -375,7 +376,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
     // nid_return.remove_entry("nids");
     // println!("{:?}", nid_return);
     update_struct(&mut data, &line_mappings);
-    println!("{:?}", data);
+    println!("A:KJLK {:?}", data);
     // println!("{output_line_num}");
     // println!("{:?}", line_mappings);
     Ok(data)
