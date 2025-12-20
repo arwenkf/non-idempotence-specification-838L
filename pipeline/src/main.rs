@@ -9,16 +9,18 @@ use std::{collections::HashMap, env};
 //   write up the simul part
 
 fn main() {
+
     println!("Hello, world!");
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
+    println!("WHYYYYYY {}", filename);
     let m = ast_analyzer::run(filename, false);
-    println!("{:?}", m);
+    println!(":LAKSJD:LKJ {:?}", m);
 
     // for temp testing purposes: [ Some(0, 9),  Some(5, 2), Some(3, 3)]
     let mut nid_track: HashMap<String, Vec<(i32, i32)>> = HashMap::new();
-    nid_track.insert("x".to_string(), vec![(0,13), (5,4), (3,6)]);
-    nid_track.insert("rb".to_string(), vec![(0,12), (1,5)]);
+    nid_track.insert("z".to_string(), vec![(0,17), (20,5), (1,11)]);
+    // nid_track.insert("rb".to_string(), vec![(0,12), (1,5)]);
     let x = aca::create_simul(filename, nid_track).unwrap();
     let _ = pre_post_injection::run(&x, "output.rs".to_string());
 }

@@ -284,6 +284,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                 writeln!(output, "{}", format!(
                     "let mut exec_num = 1;"
                 ))?;
+                output_line_num +=1;
                 // output_line_num += 1;
                 // curr_line_num +=1 ;
                 // continue;
@@ -296,6 +297,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                     "{}(exec_num: &mut i32){}",
                     head, tail
                 ))?;
+                output_line_num +=1;
                 // output_line_num += 1;
                 // curr_line_num +=1 ;
                 // continue;
@@ -310,6 +312,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
                     "{}({}, exec_num: &mut i32){}",
                     head, params.trim(), tail
                 ))?;
+                output_line_num +=1;
                 // output_line_num += 1;
                 // curr_line_num +=1 ;
                 // continue;
@@ -464,6 +467,7 @@ pub fn create_simul(file: &str, nid_track: HashMap<String, Vec<(i32, i32)>>) -> 
     // nid_return.remove_entry("nids");
     // println!("{:?}", nid_return);
     update_struct(&mut data, &line_mappings);
+    println!("{:?}", data);
     // println!("A:KJLK {:?}", data);
     println!("{output_line_num}");
     // println!("{:?}", line_mappings);

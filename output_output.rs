@@ -19,40 +19,19 @@ fn lookup(
         .map(|(val, _)| val)           
 }
 
+
 //atomic start
-//#[nids(x,rb)]
-fn update(x:& mut u16, rb:& mut u16, exec_num: &mut i32) -> () {
+//#[nids(z)]
+fn test(z:& mut i32, exec_num: &mut i32) -> () {
  
  'label1: loop {
-if exec_num == 3 {*rb =  0} //restored from mem
-if exec_num == 4 {*rb =  1} //restored from mem
-if exec_num == 5 {*rb =  1} //restored from mem
-if exec_num == 2 {*x =  0} //restored from mem
-if exec_num == 3 {*x =  5} //restored from mem
-if exec_num == 4 {*x =  5} //restored from mem
-(if !(lookup("x", exec_num).is_none() || x.smart_eq(lookup("x", exec_num).unwrap())) { panic!("Pre-condition failed"); });
-if exec_num == 5 {*x =  3} //restored from mem
-(if !x.smart_eq(5) { panic!("Post-condition failed"); });
-   *x = 5;   
+if exec_num == 2 {*z =  0} //restored from mem
+if exec_num == 3 {*z =  20} //restored from mem
+if exec_num == 4 {*z =  1} //restored from mem
+    (if !(lookup("z", exec_num).is_none() || z.smart_eq(lookup("z", exec_num).unwrap())) { panic!("Pre-condition failed"); });
+    *z = 20;
+    (if !z.smart_eq(20) { panic!("Post-condition failed"); });
 if (exec_num == 1) {
-                    exec_num+=1;
-                    continue 'label1;
-                (if !(lookup("rb", exec_num).is_none() || rb.smart_eq(lookup("rb", exec_num).unwrap())) { panic!("Pre-condition failed"); });
-                (if !(lookup("x", exec_num).is_none() || x.smart_eq(lookup("x", exec_num).unwrap())) { panic!("Pre-condition failed"); });
-                }
-                (if !rb.smart_eq(1) { panic!("Post-condition failed"); });
-                (if !x.smart_eq(5) { panic!("Post-condition failed"); });
-   *rb = 1;    
-if (exec_num == 2) {
-                    exec_num+=1;
-                    continue 'label1;
-                (if !(lookup("rb", exec_num).is_none() || rb.smart_eq(lookup("rb", exec_num).unwrap())) { panic!("Pre-condition failed"); });
-                (if !(lookup("x", exec_num).is_none() || x.smart_eq(lookup("x", exec_num).unwrap())) { panic!("Pre-condition failed"); });
-                }
-                (if !rb.smart_eq(1) { panic!("Post-condition failed"); });
-                (if !x.smart_eq(3) { panic!("Post-condition failed"); });
-   *x = 3;
-if (exec_num == 3) {
                     exec_num+=1;
                     continue 'label1;
                 }
@@ -61,18 +40,40 @@ break;
 }
 
 //atomic start
-//#[nids(x,rb)]
-fn main() {
-let mut exec_num = 1;
- (if !(lookup("rb", exec_num).is_none() || rb.smart_eq(lookup("rb", exec_num).unwrap())) { panic!("Pre-condition failed"); });
+//#[nids(z)]
+fn meow(z:&mut i32, exec_num: &mut i32) -> () {
  
- (if !rb.smart_eq(0) { panic!("Post-condition failed"); });
- (if !(lookup("x", exec_num).is_none() || x.smart_eq(lookup("x", exec_num).unwrap())) { panic!("Pre-condition failed"); });
  'label2: loop {
- (if !x.smart_eq(0) { panic!("Post-condition failed"); });
-   let mut rb = 0;
-   let mut x = 0;
-update(&mut x, &mut rb, &mut exec_num)
+if exec_num == 2 {*z =  0} //restored from mem
+if exec_num == 3 {*z =  20} //restored from mem
+if exec_num == 4 {*z =  1} //restored from mem
+    (if !(lookup("z", exec_num).is_none() || z.smart_eq(lookup("z", exec_num).unwrap())) { panic!("Pre-condition failed"); });
+    *z = 1;
+    (if !z.smart_eq(1) { panic!("Post-condition failed"); });
+if (exec_num == 2) {
+                    exec_num+=1;
+                    continue 'label2;
+                }
 break; 
  }
 }
+
+//atomic start
+//#[nids(z)]
+fn main() {
+let mut exec_num = 1;
+ 
+ 'label3: loop {
+    (if !(lookup("z", exec_num).is_none() || z.smart_eq(lookup("z", exec_num).unwrap())) { panic!("Pre-condition failed"); });
+    let mut z = 0;
+    (if !z.smart_eq(0) { panic!("Post-condition failed"); });
+    let mut x = 12;
+    x += 1;
+
+test(&mut z, &mut exec_num)
+
+break; 
+ }
+}
+
+
